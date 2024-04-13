@@ -6,7 +6,7 @@ Este projeto usa o Vagrant, uma ferramenta de automação de infraestrutura que 
 
 ## Recursos
 
-- **Provisionamento Automatizado**: O arquivo `Vagrantfile` neste repositório contém as configurações necessárias para criar e provisionar uma máquina virtual com as dependências específicas para sua aplicação.
+- **Provisionamento Automatizado**: O arquivo `Vagrantfile` neste repositório contém as configurações necessárias para criar e provisionar uma máquina virtual com virtualbox e com um playbook com Ansible onde voçê nao precisa instalar depencias de forma manual.
   
 - **Facilidade de Uso**: Com o Vagrant, você pode iniciar uma máquina virtual com apenas um comando, simplificando o processo de configuração do ambiente de desenvolvimento.
 
@@ -17,10 +17,12 @@ Este projeto usa o Vagrant, uma ferramenta de automação de infraestrutura que 
 1. Clone este repositório para o seu ambiente de desenvolvimento local:
    git clone https://github.com/LSaints/Linux-VM-provisioning
 2. Navegue até o diretório do repositório:
-3. Inicie a máquina virtual usando o Vagrant:
-   vagrant up
-4. Acesse a máquina virtual via SSH:
-   vagrant ssh
+3. Altere o arquivo .env.example para .env
+4. Adicione a suas proprias variáveis de ambiente
+5. Inicie a máquina virtual usando:
+   sudo sh install-and-init.sh
+6. Acesse a máquina virtual via SSH:
+   sudo vagrant ssh
 
 Agora você está dentro da máquina virtual e pode começar a trabalhar no seu projeto.
  

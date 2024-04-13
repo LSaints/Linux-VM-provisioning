@@ -1,0 +1,135 @@
+- name: VPS
+  hosts: all
+  become: true
+  tasks:
+    - name: Definir senha para o usuário root
+      user:
+        name: root
+        password: 123
+
+    - name: Atualizar pacotes e instalar ferramentas essenciais
+      apt:
+        name: "{{ item }}"
+        state: latest
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+        - gnupg2
+        - wget
+
+    - name: Atualizar todos os pacotes
+      apt:
+        update_cache: yes
+        upgrade: yes
+        autoremove: yes
+
+    - name: Instalar Docker
+      shell: curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Iniciar serviço Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Adicionar usuário ao grupo docker
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Instalar Docker Compose
+      shell: curl -L "https://github.com/docker/compose/releases/download/1.29.1/docker-compose-{{ ansible_system }}-{{ ansible_machine }}" -o /usr/local/bin/docker-compose
+      args:
+        creates: /usr/local/bin/docker-compose
+
+    - name: Adicionar permissões de execução ao Docker Compose
+      file:
+        path: /usr/local/bin/docker-compose
+        mode: 'a+x'
+
+    - name: Instalar Java
+      apt:
+        name: "{{ item }}"
+        state: latest
+      loop:
+        - openjdk-11-jre-headless
+        - default-jre
+
+    - name: Instalar chave GPG do repositório Jenkins
+      shell: wget -O /usr/share/keyrings/jenkins-keyring.asc https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+
+    - name: Adicionar o repositório do Jenkins ao arquivo de lista de fontes do sistema
+      shell: echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+    - name: Atualizar pacotes
+      apt:
+        update_cache: yes
+
+    - name: Instalar Jenkins
+      apt:
+        name: jenkins
+        state: latest
+
+    - name: Adicionar usuário vagrant ao grupo docker
+      user:
+        name: vagrant
+        groups: docker
+        append: yes
+
+    - name: Configurar serviço Jenkins
+      systemd:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Obter senha inicial do Jenkins
+      shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_password
+
+    - debug:
+        var: jenkins_password.stdout_lines
+
+    - name: Adicionar permissões sudo para o usuário jenkins
+      become: yes
+      lineinfile:
+        path: /etc/sudoers
+        line: 'jenkins ALL=(ALL) NOPASSWD: ALL'
+        state: present
+
+    - name: Instalar ufw
+      apt:
+        name: ufw
+        state: present
+
+    - name: Desativar e parar o serviço de firewall
+      ufw:
+        state: disabled
+
+    - name: Criar diretório para dados do Portainer
+      file:
+        path: /opt/portainer
+        state: directory
+
+    - name: Criar arquivo docker-compose.yaml para o Portainer
+      copy:
+        content: |
+          version: '3'
+          services:
+            portainer:
+              image: portainer/portainer-ce:latest
+              restart: always
+              ports:
+                - "9000:9000"
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+                - /opt/portainer:/data
+      dest: /opt/portainer/docker-compose.yaml
+
+    - name: Iniciar serviço do Portainer
+      command: docker-compose -f /opt/portainer/docker-compose.yaml up -d
